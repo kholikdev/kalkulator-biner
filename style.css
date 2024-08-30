@@ -17,8 +17,8 @@ body {
     width: 300px;
 }
 
-h1 {
-    margin-bottom: 20px;
+h6 {
+    margin: -10px 0 20px 0;
 }
 
 label {
