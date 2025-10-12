@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konversi Bilangan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Konversi Bilangan</h1>
+        <label for="fromBase">Dari basis:</label>
+        <select id="fromBase">
+            <option value="b">Biner</option>
+            <option value="o">Oktal</option>
+            <option value="d">Desimal</option>
+            <option value="h">Heksadesimal</option>
+        </select>
+
+        <label for="toBase">Ke basis:</label>
+        <select id="toBase">
+            <option value="b">Biner</option>
+            <option value="o">Oktal</option>
+            <option value="d">Desimal</option>
+            <option value="h">Heksadesimal</option>
+        </select>
+
+        <label for="number">Masukkan bilangan:</label>
+        <input type="text" id="number">
+
+        <button onclick="convert()">Konversi</button>
+
+        <p id="result"></p>
+
+        <!-- Teks Cara -->
+        <button class="show-steps-btn" onclick="toggleSteps()">Cara Konversi</button>
+        <div id="steps" class="steps" style="display: none;">
+            <h2>Langkah-langkah Konversi</h2>
+            <h6>By kholik</h6>
+            <p id="conversionSteps"></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
