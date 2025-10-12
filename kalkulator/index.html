@@ -3,44 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Konversi Bilangan</title>
+    <title>Power Calculator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Konversi Bilangan</h1>
-        <label for="fromBase">Dari basis:</label>
-        <select id="fromBase">
-            <option value="b">Biner</option>
-            <option value="o">Oktal</option>
-            <option value="d">Desimal</option>
-            <option value="h">Heksadesimal</option>
-        </select>
-
-        <label for="toBase">Ke basis:</label>
-        <select id="toBase">
-            <option value="b">Biner</option>
-            <option value="o">Oktal</option>
-            <option value="d">Desimal</option>
-            <option value="h">Heksadesimal</option>
-        </select>
-
-        <label for="number">Masukkan bilangan:</label>
-        <input type="text" id="number">
-
-        <button onclick="convert()">Konversi</button>
-
-        <p id="result"></p>
-
-        <!-- Teks Cara -->
-        <button class="show-steps-btn" onclick="toggleSteps()">Cara Konversi</button>
-        <div id="steps" class="steps" style="display: none;">
-            <h2>Langkah-langkah Konversi</h2>
-            <h6>By kholik</h6>
-            <p id="conversionSteps"></p>
+        <h1>Power Calculator</h1>
+        <div class="mode-selector">
+            <button id="basicMode" class="mode-btn active" onclick="setMode('basic')">Basic Calculator</button>
+            <button id="converterMode" class="mode-btn" onclick="setMode('converter')">Base Converter</button>
+        </div>
+        <div class="base-info" id="baseInfo" style="display: none; margin-bottom: 10px; font-size: 0.9em; color: #666;">
+            <strong>Input Base:</strong>
+            <button class="btn base-select" onclick="setSourceBase(2)">Bin(2)</button>
+            <button class="btn base-select" onclick="setSourceBase(8)">Oct(8)</button>
+            <button class="btn base-select" onclick="setSourceBase(10)">Dec(10)</button>
+            <button class="btn base-select" onclick="setSourceBase(16)">Hex(16)</button>
+        </div>
+        <div class="display">
+            <div id="display" contenteditable="true"></div>
+        </div>
+        <div class="buttons">
+            <button class="btn clear" onclick="clearDisplay()">C</button>
+            <button class="btn backspace" onclick="backspace()">⌫</button>
+            <button class="btn operator" onclick="appendToDisplay('^')">^</button>
+            <button class="btn operator" onclick="appendToDisplay('/')">/</button>
+            <button class="btn number" onclick="appendToDisplay('7')">7</button>
+            <button class="btn number" onclick="appendToDisplay('8')">8</button>
+            <button class="btn number" onclick="appendToDisplay('9')">9</button>
+            <button class="btn operator" onclick="appendToDisplay('*')">*</button>
+            <button class="btn number" onclick="appendToDisplay('4')">4</button>
+            <button class="btn number" onclick="appendToDisplay('5')">5</button>
+            <button class="btn number" onclick="appendToDisplay('6')">6</button>
+            <button class="btn operator" onclick="appendToDisplay('-')">-</button>
+            <button class="btn number" onclick="appendToDisplay('1')">1</button>
+            <button class="btn number" onclick="appendToDisplay('2')">2</button>
+            <button class="btn number" onclick="appendToDisplay('3')">3</button>
+            <button class="btn operator" onclick="appendToDisplay('+')">+</button>
+            <button class="btn number" onclick="appendToDisplay('0')">0</button>
+            <button class="btn number" onclick="appendToDisplay('.')">.</button>
+            <button class="btn equal" onclick="calculate()">=</button>
+            <button class="btn function" onclick="appendToDisplay('sqrt(')">√</button>
+            <button class="btn function" onclick="appendToDisplay('log(')">log</button>
+            <button class="btn function" onclick="appendToDisplay('ln(')">ln</button>
+            <button class="btn function" onclick="appendToDisplay('sin(')">sin</button>
+            <button class="btn function" onclick="appendToDisplay('cos(')">cos</button>
+            <button class="btn function" onclick="appendToDisplay('tan(')">tan</button>
+            <button class="btn function" onclick="appendToDisplay('fact(')">fact</button>
+            <button class="btn function" onclick="appendToDisplay('pi')">π</button>
+            <button class="btn function" onclick="appendToDisplay('e')">e</button>
+            <button class="btn function" onclick="appendToDisplay('phi')">φ</button>
+            <button class="btn function" onclick="appendToDisplay('c')">c</button>
+            <button class="btn function" onclick="appendToDisplay('g')">g</button>
+            <button class="btn function" onclick="appendToDisplay('h')">h</button>
+            <button class="btn function" onclick="addCustomConstant()">Add Const</button>
+            <button class="btn function" onclick="appendToDisplay('(')">(</button>
+            <button class="btn function" onclick="appendToDisplay(')')">)</button>
+        </div>
+        <div class="history">
+            <div class="history-header">
+                <h3>History</h3>
+                <button id="toggleHistory" class="btn toggle-btn">Hide</button>
+            </div>
+            <ul id="historyList"></ul>
+        </div>
+        <div class="memory">
+            <div class="memory-header">
+                <h3>Memory</h3>
+                <div class="memory-buttons">
+                    <button class="btn memory-btn" onclick="memoryPlus()">M+</button>
+                    <button class="btn memory-btn" onclick="memoryMinus()">M-</button>
+                    <button class="btn memory-btn" onclick="memoryClear()">MC</button>
+                    <button class="btn memory-btn" onclick="memoryRecall()">MR</button>
+                    <button class="btn memory-btn" onclick="memoryStore()">MS</button>
+                </div>
+            </div>
+            <ul id="memoryList"></ul>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>

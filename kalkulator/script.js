@@ -1,273 +1,426 @@
-function convert() {
-    const fromBase = document.getElementById('fromBase').value;
-    const toBase = document.getElementById('toBase').value;
-    const number = document.getElementById('number').value.trim().toUpperCase();
-    let result;
-    let steps = "";
+let history = [];
+let currentMode = 'basic';
+let memory = [0, 0, 0, 0, 0]; // M1 to M5
+let currentMemorySlot = 0; // 0 for M1, 1 for M2, etc.
+let rawText = '';
 
-    if (fromBase === toBase) {
-        document.getElementById('result').innerText = `Basisnya sama cok, nilai tetap: ${number}`;
-        document.getElementById('conversionSteps').innerText = "Gak ada caranya lah cok!";
+function appendToDisplay(value) {
+    const display = document.getElementById('display');
+    display.textContent += value;
+    highlightParentheses();
+}
+
+function clearDisplay() {
+    document.getElementById('display').textContent = '';
+    highlightParentheses();
+}
+
+function backspace() {
+    const display = document.getElementById('display');
+    display.textContent = display.textContent.slice(0, -1);
+    highlightParentheses();
+}
+
+function factorial(n) {
+    if (n < 0) return NaN;
+    if (n === 0 || n === 1) return 1;
+    return n * factorial(n - 1);
+}
+
+function highlightParentheses() {
+    const display = document.getElementById('display');
+    const text = display.textContent;
+    let highlighted = '';
+    let openCount = 0;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '(') {
+            openCount++;
+            highlighted += '<span class="highlight">(';
+        } else if (text[i] === ')') {
+            if (openCount > 0) {
+                openCount--;
+                highlighted += ')</span>';
+            } else {
+                highlighted += ')';
+            }
+        } else {
+            highlighted += text[i];
+        }
+    }
+    display.innerHTML = highlighted;
+}
+
+function calculate() {
+    const display = document.getElementById('display');
+    let expression = display.textContent;
+
+    try {
+        // Replace ^ with ** for exponentiation
+        expression = expression.replace(/\^/g, '**');
+
+        // Handle functions
+        expression = expression.replace(/sqrt\(/g, 'Math.sqrt(');
+        expression = expression.replace(/log\(/g, 'Math.log10(');
+        expression = expression.replace(/ln\(/g, 'Math.log(');
+        expression = expression.replace(/sin\(/g, 'Math.sin(');
+        expression = expression.replace(/cos\(/g, 'Math.cos(');
+        expression = expression.replace(/tan\(/g, 'Math.tan(');
+        expression = expression.replace(/asin\(/g, 'Math.asin(');
+        expression = expression.replace(/acos\(/g, 'Math.acos(');
+        expression = expression.replace(/atan\(/g, 'Math.atan(');
+        expression = expression.replace(/fact\(/g, 'factorial(');
+
+        // Handle constants
+        expression = expression.replace(/pi/g, 'Math.PI');
+        expression = expression.replace(/e/g, 'Math.E');
+        expression = expression.replace(/phi/g, '(1 + Math.sqrt(5)) / 2');
+        expression = expression.replace(/sqrt2/g, 'Math.SQRT2');
+        expression = expression.replace(/c/g, '299792458'); // Speed of light (m/s)
+        expression = expression.replace(/g/g, '9.80665'); // Gravity (m/s²)
+        expression = expression.replace(/h/g, '6.62607015e-34'); // Planck's constant (J⋅s)
+
+        // Handle custom constants from localStorage
+        const customConstants = JSON.parse(localStorage.getItem('customConstants') || '{}');
+        for (const [key, value] of Object.entries(customConstants)) {
+            expression = expression.replace(new RegExp(key, 'g'), value);
+        }
+
+        const result = eval(expression);
+        const calculation = `${display.textContent} = ${result}`;
+        display.textContent = result;
+
+        // Add to history
+        history.unshift(calculation);
+        if (history.length > 10) {
+            history.pop();
+        }
+        updateHistory();
+    } catch (error) {
+        display.textContent = 'Error: Invalid expression';
+    }
+}
+
+function updateHistory() {
+    const historyList = document.getElementById('historyList');
+    historyList.innerHTML = '';
+    history.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        li.onclick = () => {
+            const expression = item.split(' = ')[0];
+            const display = document.getElementById('display');
+            display.textContent = expression;
+            highlightParentheses();
+        };
+        historyList.appendChild(li);
+    });
+}
+
+function toggleHistory() {
+    const historyDiv = document.querySelector('.history');
+    const toggleBtn = document.getElementById('toggleHistory');
+    if (historyDiv.classList.contains('collapsed')) {
+        historyDiv.classList.remove('collapsed');
+        toggleBtn.textContent = 'Hide';
+    } else {
+        historyDiv.classList.add('collapsed');
+        toggleBtn.textContent = 'Show';
+    }
+}
+
+// Initialize toggle button event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleHistory');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleHistory);
+    }
+    setMode('basic'); // Set default mode
+    updateMemoryDisplay(); // Initialize memory display
+    updateBaseDisplay(); // Initialize base display
+});
+
+function setMode(mode) {
+    currentMode = mode;
+    const basicBtn = document.getElementById('basicMode');
+    const converterBtn = document.getElementById('converterMode');
+    const buttonsDiv = document.querySelector('.buttons');
+
+    // Update button states
+    basicBtn.classList.toggle('active', mode === 'basic');
+    converterBtn.classList.toggle('active', mode === 'converter');
+
+    // Clear display
+    clearDisplay();
+
+    // Update buttons based on mode
+    if (mode === 'basic') {
+        buttonsDiv.innerHTML = `
+            <button class="btn clear" onclick="clearDisplay()">C</button>
+            <button class="btn backspace" onclick="backspace()">⌫</button>
+            <button class="btn operator" onclick="appendToDisplay('^')">^</button>
+            <button class="btn operator" onclick="appendToDisplay('/')">/</button>
+            <button class="btn number" onclick="appendToDisplay('7')">7</button>
+            <button class="btn number" onclick="appendToDisplay('8')">8</button>
+            <button class="btn number" onclick="appendToDisplay('9')">9</button>
+            <button class="btn operator" onclick="appendToDisplay('*')">*</button>
+            <button class="btn number" onclick="appendToDisplay('4')">4</button>
+            <button class="btn number" onclick="appendToDisplay('5')">5</button>
+            <button class="btn number" onclick="appendToDisplay('6')">6</button>
+            <button class="btn operator" onclick="appendToDisplay('-')">-</button>
+            <button class="btn number" onclick="appendToDisplay('1')">1</button>
+            <button class="btn number" onclick="appendToDisplay('2')">2</button>
+            <button class="btn number" onclick="appendToDisplay('3')">3</button>
+            <button class="btn operator" onclick="appendToDisplay('+')">+</button>
+            <button class="btn number" onclick="appendToDisplay('0')">0</button>
+            <button class="btn number" onclick="appendToDisplay('.')">.</button>
+            <button class="btn equal" onclick="calculate()">=</button>
+            <button class="btn function" onclick="appendToDisplay('sqrt(')">√</button>
+            <button class="btn function" onclick="appendToDisplay('log(')">log</button>
+            <button class="btn function" onclick="appendToDisplay('(')">(</button>
+            <button class="btn function" onclick="appendToDisplay(')')">)</button>
+        `;
+    } else if (mode === 'converter') {
+        buttonsDiv.innerHTML = `
+            <button class="btn clear" onclick="clearDisplay()">C</button>
+            <button class="btn backspace" onclick="backspace()">⌫</button>
+            <button class="btn base-btn" onclick="convertToBase(2)">Bin</button>
+            <button class="btn base-btn" onclick="convertToBase(8)">Oct</button>
+            <button class="btn number" onclick="appendToDisplay('7')">7</button>
+            <button class="btn number" onclick="appendToDisplay('8')">8</button>
+            <button class="btn number" onclick="appendToDisplay('9')">9</button>
+            <button class="btn base-btn" onclick="convertToBase(10)">Dec</button>
+            <button class="btn number" onclick="appendToDisplay('4')">4</button>
+            <button class="btn number" onclick="appendToDisplay('5')">5</button>
+            <button class="btn number" onclick="appendToDisplay('6')">6</button>
+            <button class="btn base-btn" onclick="convertToBase(16)">Hex</button>
+            <button class="btn number" onclick="appendToDisplay('1')">1</button>
+            <button class="btn number" onclick="appendToDisplay('2')">2</button>
+            <button class="btn number" onclick="appendToDisplay('3')">3</button>
+            <button class="btn number" onclick="appendToDisplay('0')">0</button>
+            <button class="btn number" onclick="appendToDisplay('A')">A</button>
+            <button class="btn number" onclick="appendToDisplay('B')">B</button>
+            <button class="btn number" onclick="appendToDisplay('C')">C</button>
+            <button class="btn number" onclick="appendToDisplay('D')">D</button>
+            <button class="btn number" onclick="appendToDisplay('E')">E</button>
+            <button class="btn number" onclick="appendToDisplay('F')">F</button>
+        `;
+    }
+}
+
+let sourceBase = 10;
+let targetBase = 2;
+
+function setSourceBase(base) {
+    if (currentMode === 'converter') {
+        sourceBase = base;
+        updateBaseDisplay();
+        clearDisplay();
+    }
+}
+
+function convertToBase(targetBase) {
+    const display = document.getElementById('display');
+    const input = display.textContent.trim();
+
+    if (!input) {
+        display.textContent = 'Error: No input';
         return;
     }
 
     try {
-        if (fromBase === 'd') {
-            // Konversi dari Desimal ke basis lain
-            const decimalNumber = parseInt(number, 10);
-            if (toBase === 'b') {
-                result = decimalToBinary(decimalNumber);
-                steps = getDecimalToBinarySteps(decimalNumber);
-            } else if (toBase === 'o') {
-                result = decimalToOctal(decimalNumber);
-                steps = getDecimalToOctalSteps(decimalNumber);
-            } else if (toBase === 'h') {
-                result = decimalToHex(decimalNumber);
-                steps = getDecimalToHexSteps(decimalNumber);
-            }
-        } else if (fromBase === 'b') {
-            // Konversi dari Biner
-            if (toBase === 'd') {
-                result = binaryToDecimal(number);
-                steps = getBinaryToDecimalSteps(number);
-            } else if (toBase === 'o') {
-                result = binaryToOctal(number);
-                steps = getBinaryToOctalSteps(number);
-            } else if (toBase === 'h') {
-                result = binaryToHex(number);
-                steps = getBinaryToHexSteps(number);
-            }
-        } else if (fromBase === 'o') {
-            // Konversi dari Oktal
-            if (toBase === 'd') {
-                result = octalToDecimal(number);
-                steps = getOctalToDecimalSteps(number);
-            } else if (toBase === 'b') {
-                result = octalToBinary(number);
-                steps = getOctalToBinarySteps(number);
-            } else if (toBase === 'h') {
-                result = octalToHex(number);
-                steps = getOctalToHexSteps(number);
-            }
-        } else if (fromBase === 'h') {
-            // Konversi dari Heksadesimal
-            if (toBase === 'd') {
-                result = hexToDecimal(number);
-                steps = getHexToDecimalSteps(number);
-            } else if (toBase === 'b') {
-                result = hexToBinary(number);
-                steps = getHexToBinarySteps(number);
-            } else if (toBase === 'o') {
-                result = hexToOctal(number);
-                steps = getHexToOctalSteps(number);
-            }
+        // Convert from source base to decimal first
+        const decimal = parseInt(input, sourceBase);
+
+        if (isNaN(decimal)) {
+            display.textContent = 'Error: Invalid input';
+            return;
         }
 
-        document.getElementById('result').innerText = `Hasil: ${result}`;
-        document.getElementById('conversionSteps').innerText = steps;
-    } catch (e) {
-        document.getElementById('result').innerText = `Error: ${e.message}`;
-        document.getElementById('conversionSteps').innerText = "";
+        // Convert from decimal to target base
+        const result = decimal.toString(targetBase).toUpperCase();
+        const conversion = `${input} (${sourceBase}) = ${result} (${targetBase})`;
+        display.textContent = result;
+
+        // Add to history
+        history.unshift(conversion);
+        if (history.length > 10) {
+            history.pop();
+        }
+        updateHistory();
+    } catch (error) {
+        display.textContent = 'Error';
     }
 }
 
-// Fungsi konversi langsung
-function decimalToBinary(decimalNumber) {
-    return decimalNumber.toString(2);
+function updateBaseDisplay() {
+    if (currentMode === 'converter') {
+        const baseInfo = document.getElementById('baseInfo');
+        baseInfo.style.display = 'block';
+        // Update button styles to show selected base
+        const sourceButtons = document.querySelectorAll('.base-select');
+        sourceButtons.forEach(btn => {
+            const base = parseInt(btn.textContent.match(/\d+/)[0]);
+            btn.classList.toggle('active', base === sourceBase);
+        });
+    } else {
+        const baseInfo = document.getElementById('baseInfo');
+        baseInfo.style.display = 'none';
+    }
 }
 
-function decimalToOctal(decimalNumber) {
-    return decimalNumber.toString(8);
-}
+function convertBase() {
+    const display = document.getElementById('display');
+    const input = display.textContent.trim();
 
-function decimalToHex(decimalNumber) {
-    return decimalNumber.toString(16).toUpperCase();
-}
-
-function binaryToDecimal(binaryNumber) {
-    return parseInt(binaryNumber, 2);
-}
-
-function binaryToOctal(binaryNumber) {
-    const decimalNumber = binaryToDecimal(binaryNumber);
-    return decimalToOctal(decimalNumber);
-}
-
-function binaryToHex(binaryNumber) {
-    const decimalNumber = binaryToDecimal(binaryNumber);
-    return decimalToHex(decimalNumber);
-}
-
-function octalToDecimal(octalNumber) {
-    return parseInt(octalNumber, 8);
-}
-
-function octalToBinary(octalNumber) {
-    const decimalNumber = octalToDecimal(octalNumber);
-    return decimalToBinary(decimalNumber);
-}
-
-function octalToHex(octalNumber) {
-    const decimalNumber = octalToDecimal(octalNumber);
-    return decimalToHex(decimalNumber);
-}
-
-function hexToDecimal(hexNumber) {
-    return parseInt(hexNumber, 16);
-}
-
-function hexToBinary(hexNumber) {
-    const decimalNumber = hexToDecimal(hexNumber);
-    return decimalToBinary(decimalNumber);
-}
-
-function hexToOctal(hexNumber) {
-    const decimalNumber = hexToDecimal(hexNumber);
-    return decimalToOctal(decimalNumber);
-}
-
-// Fungsi untuk langkah-langkah konversi
-function getDecimalToBinarySteps(decimalNumber) {
-    let steps = "";
-    let num = decimalNumber;
-    let stepNumber = 1;
-
-    while (num > 0) {
-        let remainder = num % 2;
-        steps += `Langkah ${stepNumber}: Bagi ${num} dengan 2, hasil bagi = ${Math.floor(num / 2)}, sisa = ${remainder}\n`;
-        num = Math.floor(num / 2);
-        stepNumber++;
+    if (!input) {
+        display.textContent = 'Error: No input';
+        return;
     }
 
-    return steps;
-}
+    try {
+        // Convert from source base to decimal first
+        const decimal = parseInt(input, sourceBase);
 
-function getDecimalToOctalSteps(decimalNumber) {
-    let steps = "";
-    let num = decimalNumber;
-    let stepNumber = 1;
+        if (isNaN(decimal)) {
+            display.textContent = 'Error: Invalid input';
+            return;
+        }
 
-    while (num > 0) {
-        let remainder = num % 8;
-        steps += `Langkah ${stepNumber}: Bagi ${num} dengan 8, hasil bagi = ${Math.floor(num / 8)}, sisa = ${remainder}\n`;
-        num = Math.floor(num / 8);
-        stepNumber++;
+        // Convert from decimal to target base
+        const result = decimal.toString(targetBase).toUpperCase();
+        const conversion = `${input} (${sourceBase}) = ${result} (${targetBase})`;
+        display.textContent = result;
+
+        // Add to history
+        history.unshift(conversion);
+        if (history.length > 10) {
+            history.pop();
+        }
+        updateHistory();
+    } catch (error) {
+        display.textContent = 'Error';
     }
-
-    return steps;
 }
 
-function getDecimalToHexSteps(decimalNumber) {
-    let steps = "";
-    let num = decimalNumber;
-    let stepNumber = 1;
-
-    while (num > 0) {
-        let remainder = num % 16;
-        let hexDigit = remainder.toString(16).toUpperCase();
-        steps += `Langkah ${stepNumber}: Bagi ${num} dengan 16, hasil bagi = ${Math.floor(num / 16)}, sisa = ${remainder} (hex: ${hexDigit})\n`;
-        num = Math.floor(num / 16);
-        stepNumber++;
+function addCustomConstant() {
+    const key = prompt('Enter constant name (e.g., myconst):');
+    const value = prompt('Enter constant value:');
+    if (key && value) {
+        const customConstants = JSON.parse(localStorage.getItem('customConstants') || '{}');
+        customConstants[key] = value;
+        localStorage.setItem('customConstants', JSON.stringify(customConstants));
+        alert(`Constant '${key}' added with value '${value}'`);
     }
-
-    return steps;
 }
 
-function getBinaryToDecimalSteps(binaryNumber) {
-    let steps = "";
-    let decimal = 0;
-
-    for (let i = 0; i < binaryNumber.length; i++) {
-        let digit = binaryNumber[binaryNumber.length - 1 - i];
-        let value = digit * Math.pow(2, i);
-        steps += `Langkah ${i + 1}: ${digit} * 2^${i} = ${value}\n`;
-        decimal += value;
+function memoryPlus() {
+    const display = document.getElementById('display');
+    const value = parseFloat(display.textContent);
+    if (!isNaN(value)) {
+        memory[currentMemorySlot] += value;
+        updateMemoryDisplay();
     }
-
-    steps += `Nilai desimal adalah: ${decimal}\n`;
-    return steps;
 }
 
-function getBinaryToOctalSteps(binaryNumber) {
-    let decimalSteps = getBinaryToDecimalSteps(binaryNumber);
-    let decimalNumber = binaryToDecimal(binaryNumber);
-    let octalSteps = getDecimalToOctalSteps(decimalNumber);
-
-    return `${decimalSteps}\nLalu konversi dari desimal ke oktal:\n${octalSteps}`;
-}
-
-function getBinaryToHexSteps(binaryNumber) {
-    let decimalSteps = getBinaryToDecimalSteps(binaryNumber);
-    let decimalNumber = binaryToDecimal(binaryNumber);
-    let hexSteps = getDecimalToHexSteps(decimalNumber);
-
-    return `${decimalSteps}\nLalu konversi dari desimal ke heksadesimal:\n${hexSteps}`;
-}
-
-function getOctalToDecimalSteps(octalNumber) {
-    let steps = "";
-    let decimal = 0;
-
-    for (let i = 0; i < octalNumber.length; i++) {
-        let digit = octalNumber[octalNumber.length - 1 - i];
-        let value = digit * Math.pow(8, i);
-        steps += `Langkah ${i + 1}: ${digit} * 8^${i} = ${value}\n`;
-        decimal += value;
+function memoryMinus() {
+    const display = document.getElementById('display');
+    const value = parseFloat(display.textContent);
+    if (!isNaN(value)) {
+        memory[currentMemorySlot] -= value;
+        updateMemoryDisplay();
     }
-
-    steps += `Nilai desimal adalah: ${decimal}\n`;
-    return steps;
 }
 
-function getOctalToBinarySteps(octalNumber) {
-    let decimalSteps = getOctalToDecimalSteps(octalNumber);
-    let decimalNumber = octalToDecimal(octalNumber);
-    let binarySteps = getDecimalToBinarySteps(decimalNumber);
-
-    return `${decimalSteps}\nLalu konversi dari desimal ke biner:\n${binarySteps}`;
+function memoryClear() {
+    memory[currentMemorySlot] = 0;
+    updateMemoryDisplay();
 }
 
-function getOctalToHexSteps(octalNumber) {
-    let decimalSteps = getOctalToDecimalSteps(octalNumber);
-    let decimalNumber = octalToDecimal(octalNumber);
-    let hexSteps = getDecimalToHexSteps(decimalNumber);
-
-    return `${decimalSteps}\nLalu konversi dari desimal ke heksadesimal:\n${hexSteps}`;
+function memoryRecall() {
+    const display = document.getElementById('display');
+    display.textContent = memory[currentMemorySlot];
+    highlightParentheses();
 }
 
-function getHexToDecimalSteps(hexNumber) {
-    let steps = "";
-    let decimal = 0;
-
-    for (let i = 0; i < hexNumber.length; i++) {
-        let digit = parseInt(hexNumber[hexNumber.length - 1 - i], 16);
-        let value = digit * Math.pow(16, i);
-        steps += `Langkah ${i + 1}: ${digit} * 16^${i} = ${value}\n`;
-        decimal += value;
+function memoryStore() {
+    const display = document.getElementById('display');
+    const value = parseFloat(display.textContent);
+    if (!isNaN(value)) {
+        memory[currentMemorySlot] = value;
+        updateMemoryDisplay();
     }
-
-    steps += `Nilai desimal adalah: ${decimal}\n`;
-    return steps;
 }
 
-function getHexToBinarySteps(hexNumber) {
-    let decimalSteps = getHexToDecimalSteps(hexNumber);
-    let decimalNumber = hexToDecimal(hexNumber);
-    let binarySteps = getDecimalToBinarySteps(decimalNumber);
-
-    return `${decimalSteps}\nLalu konversi dari desimal ke biner:\n${binarySteps}`;
+function setMemorySlot(slot) {
+    currentMemorySlot = slot - 1; // 0-based index
+    updateMemoryDisplay();
 }
 
-function getHexToOctalSteps(hexNumber) {
-    let decimalSteps = getHexToDecimalSteps(hexNumber);
-    let decimalNumber = hexToDecimal(hexNumber);
-    let octalSteps = getDecimalToOctalSteps(decimalNumber);
-
-    return `${decimalSteps}\nLalu konversi dari desimal ke oktal:\n${octalSteps}`;
+function updateMemoryDisplay() {
+    const memoryDiv = document.getElementById('memoryList');
+    if (memoryDiv) {
+        memoryDiv.innerHTML = '';
+        memory.forEach((value, index) => {
+            const li = document.createElement('li');
+            li.textContent = `M${index + 1}: ${value}`;
+            li.onclick = () => setMemorySlot(index + 1);
+            if (index === currentMemorySlot) {
+                li.classList.add('active');
+            }
+            memoryDiv.appendChild(li);
+        });
+    }
 }
 
-// Toggle display of conversion steps
-function toggleSteps() {
-    const stepsDiv = document.getElementById('steps');
-    stepsDiv.style.display = stepsDiv.style.display === 'none' ? 'block' : 'none';
-}
+// Allow keyboard input
+document.addEventListener('keydown', function(event) {
+    const key = event.key;
+    if (key >= '0' && key <= '9') {
+        appendToDisplay(key);
+    } else if (key === '+' || key === '-' || key === '*' || key === '/' || key === '^' || key === '.') {
+        appendToDisplay(key);
+    } else if (key === 'Enter') {
+        if (currentMode === 'basic') {
+            calculate();
+        } else {
+            convertBase();
+        }
+    } else if (key === 'Backspace') {
+        backspace();
+    } else if (key === 'Escape') {
+        clearDisplay();
+    } else if (key === '(' || key === ')') {
+        appendToDisplay(key);
+    } else if (currentMode === 'converter' && 'ABCDEFabcdef'.includes(key)) {
+        appendToDisplay(key.toUpperCase());
+    } else if (currentMode === 'basic' && key === 's') {
+        appendToDisplay('sin(');
+    } else if (currentMode === 'basic' && key === 'c') {
+        appendToDisplay('cos(');
+    } else if (currentMode === 'basic' && key === 't') {
+        appendToDisplay('tan(');
+    } else if (currentMode === 'basic' && key === 'l') {
+        appendToDisplay('log(');
+    } else if (currentMode === 'basic' && key === 'n') {
+        appendToDisplay('ln(');
+    } else if (currentMode === 'basic' && key === 'q') {
+        appendToDisplay('sqrt(');
+    } else if (currentMode === 'basic' && key === 'f') {
+        appendToDisplay('fact(');
+    } else if (currentMode === 'basic' && key === 'p') {
+        appendToDisplay('pi');
+    } else if (currentMode === 'basic' && key === 'e') {
+        appendToDisplay('e');
+    } else if (event.ctrlKey && key === 'c') {
+        // Copy
+        const display = document.getElementById('display');
+        navigator.clipboard.writeText(display.textContent);
+    } else if (event.ctrlKey && key === 'v') {
+        // Paste
+        navigator.clipboard.readText().then(text => {
+            const display = document.getElementById('display');
+            display.textContent = text;
+            highlightParentheses();
+        });
+    }
+});
